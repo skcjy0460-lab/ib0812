@@ -18,7 +18,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 DISCLAIMER_TEXT = (
-    "본 보고서는 입력된 급여기준 원문을 바탕으로 AI(Google Gemini)가 생성한 "
+    "본 보고서는 입력된 급여기준 원문을 바탕으로 AI가 생성한 "
     "참고용 요약·분석 자료입니다. 실제 요양급여 인정 여부, 삭감 위험 판단 및 "
     "최종 청구 결정은 반드시 건강보험심사평가원(HIRA)의 최신 공식 고시·심사기준 "
     "원문과 담당자의 전문적 검토를 통해 이루어져야 하며, 본 보고서 내용과 실제 "
@@ -221,7 +221,6 @@ def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: boo
       <div class="meta">
         생성일시: {generated_at.strftime('%Y-%m-%d %H:%M')}<br/>
         작성자: {_esc(ctx.author_name) or '-'}<br/>
-        사용 모델: {_esc(ctx.model_used) or '-'}<br/>
         참조 파일: {_esc(', '.join(ctx.source_filenames)) or '직접 입력'}
       </div>
     </div>
