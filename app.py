@@ -42,16 +42,43 @@ st.set_page_config(
 
 AVAILABLE_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"]
 
-CASE_FIELD_DEFS = [
-    ("department", "진료과", "text"),
-    ("primary_diagnosis", "주상병(명 / 상병코드)", "text"),
-    ("secondary_diagnosis", "부상병(명 / 상병코드)", "text"),
-    ("procedure_code", "시행 수가코드 / 명칭", "text"),
-    ("treatment_count", "청구(예정) 시행횟수", "text"),
-    ("treatment_period", "시행 기간 / 최근 시행일", "text"),
-    ("patient_age", "환자 연령", "text"),
-    ("memo", "특이사항 / 메모", "area"),
+CASE_FORM_GROUPS = [
+    {
+        "title": "진단 정보",
+        "icon": "🩺",
+        "fields": [
+            ("department", "진료과", "text"),
+            ("primary_diagnosis", "주상병명 / 상병코드", "text"),
+            ("diagnosis_date", "진단일", "text"),
+            ("secondary_diagnosis", "부상병명 / 상병코드", "text"),
+        ],
+    },
+    {
+        "title": "시행 내역",
+        "icon": "📋",
+        "fields": [
+            ("procedure_code", "시행 수가코드 / 명칭", "text"),
+            ("treatment_period", "시행 기간 / 최근 시행일", "text"),
+            ("treatment_count", "금회 청구 시행횟수", "text"),
+            ("cumulative_count", "누적(연간) 시행횟수", "text"),
+            ("prescriber", "처방의 / 전문과목", "text"),
+        ],
+    },
+    {
+        "title": "청구 정보",
+        "icon": "🧾",
+        "fields": [
+            ("claim_type", "청구 구분 (외래 / 입원)", "text"),
+            ("special_code", "특정기호", "text"),
+            ("prior_claim", "전월 동일항목 청구 여부", "text"),
+        ],
+    },
 ]
+
+# 모든 텍스트 필드 + 메모(memo)를 합친 case_info 기본 키 목록
+CASE_FIELD_DEFS = [f for g in CASE_FORM_GROUPS for f in g["fields"]] + [("memo", "특이사항 / 메모", "area")]
+
+ATTACHMENT_CHECKLIST_LABELS = ["진단서", "영상자료(X-ray/MRI 등)", "치료기록지", "소견서", "기타 증빙자료"]
 
 
 def _init_state() -> None:
@@ -66,6 +93,8 @@ def _init_state() -> None:
         "source_docs": [],  # list of ExtractedDocument-like dict
         "manual_text": "",
         "case_info": {k: "" for k, _, _ in CASE_FIELD_DEFS},
+        "case_attachments": [],  # list of {"filename": str, "size": int, "category": str}
+        "attachment_uploader_key": 0,
         "last_result": None,  # dict: diagnosis + meta
         "history": [],  # list of same shape as last_result
         "uploader_key": 0,
@@ -259,26 +288,69 @@ def _render_case_tab() -> None:
     st.subheader("2️⃣ 청구 케이스 정보 (선택 입력)")
     st.caption(
         "실제 청구 건 정보를 입력하면 AI가 급여기준과 케이스를 대조해 적합/주의/부적합을 판정합니다. "
-        "비워두면 급여기준 자체에 대한 요약·체크리스트만 생성됩니다."
+        "비워두면 급여기준 자체에 대한 요약·체크리스트만 생성됩니다. 환자 개인식별정보(이름 등)는 "
+        "입력하지 않는 것을 권장합니다."
     )
     st.session_state.case_title = st.text_input(
         "케이스 제목 (보고서 상단에 표시됩니다)",
         value=st.session_state.case_title,
-        placeholder="예) 김OO 환자 도수치료 15회 초과 청구 검토",
+        placeholder="예) 도수치료 15회 초과 청구 검토",
     )
 
-    cols = st.columns(2)
-    for idx, (key, label, kind) in enumerate(CASE_FIELD_DEFS):
-        target_col = cols[idx % 2]
-        with target_col:
-            if kind == "area":
-                st.session_state.case_info[key] = st.text_area(
-                    label, value=st.session_state.case_info.get(key, ""), height=100, key=f"case_{key}"
-                )
-            else:
+    for group in CASE_FORM_GROUPS:
+        st.markdown(f"##### {group['icon']} {group['title']}")
+        cols = st.columns(len(group["fields"]) if len(group["fields"]) <= 3 else 3)
+        for idx, (key, label, kind) in enumerate(group["fields"]):
+            with cols[idx % len(cols)]:
                 st.session_state.case_info[key] = st.text_input(
                     label, value=st.session_state.case_info.get(key, ""), key=f"case_{key}"
                 )
+        st.markdown("")
+
+    st.markdown("##### 📎 첨부 · 특이사항")
+    st.caption(
+        "진단서, 영상자료, 치료기록지 등 청구 근거 자료를 첨부해 두면 보고서에 첨부 목록이 함께 기록됩니다. "
+        "(파일 내용은 AI 분석에 사용되지 않고 파일명만 기록·보관됩니다.)"
+    )
+
+    attach_cols = st.columns([3, 1])
+    with attach_cols[0]:
+        new_files = st.file_uploader(
+            "첨부 자료 업로드 (여러 개 선택 가능)",
+            accept_multiple_files=True,
+            key=f"attachment_uploader_{st.session_state.attachment_uploader_key}",
+            label_visibility="collapsed",
+        )
+    with attach_cols[1]:
+        attach_category = st.selectbox("구분", ATTACHMENT_CHECKLIST_LABELS, label_visibility="collapsed")
+
+    if st.button("➕ 첨부 자료 추가", disabled=not new_files):
+        for uf in new_files or []:
+            st.session_state.case_attachments.append({
+                "filename": uf.name,
+                "size": uf.size,
+                "category": attach_category,
+            })
+        st.session_state.attachment_uploader_key += 1
+        st.rerun()
+
+    if st.session_state.case_attachments:
+        for i, att in enumerate(st.session_state.case_attachments):
+            row = st.columns([5, 2, 1])
+            row[0].markdown(f"📄 {att['filename']}")
+            row[1].caption(att["category"])
+            if row[2].button("삭제", key=f"del_attach_{i}"):
+                st.session_state.case_attachments.pop(i)
+                st.rerun()
+    else:
+        st.caption("첨부된 자료가 없습니다.")
+
+    st.session_state.case_info["memo"] = st.text_area(
+        "특이사항 / 메모",
+        value=st.session_state.case_info.get("memo", ""),
+        height=100,
+        key="case_memo",
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -305,7 +377,7 @@ def _render_diagnosis_tab() -> None:
     )
 
     if run_clicked:
-        with st.spinner(f"{st.session_state.primary_model} 모델로 급여기준을 분석하는 중입니다..."):
+        with st.spinner("AI가 급여기준을 분석하는 중입니다..."):
             result = run_diagnosis(
                 api_key=st.session_state.api_key,
                 criteria_text=source_text,
@@ -327,6 +399,7 @@ def _render_diagnosis_tab() -> None:
             "id": str(uuid.uuid4()),
             "case_title": st.session_state.case_title or f"미제목 케이스 ({datetime.now().strftime('%H:%M:%S')})",
             "case_info": dict(st.session_state.case_info),
+            "case_attachments": list(st.session_state.case_attachments),
             "source_filenames": _combined_filenames(),
             "source_text": source_text,
             "model_used": result.model_used,
@@ -336,7 +409,7 @@ def _render_diagnosis_tab() -> None:
         }
         st.session_state.last_result = record
         st.session_state.history.append(record)
-        st.success(f"AI 진단이 완료되었습니다. (사용 모델: {result.model_used}, 소요 {result.elapsed_seconds:.1f}초)")
+        st.success(f"AI 진단이 완료되었습니다. (소요 {result.elapsed_seconds:.1f}초)")
         if result.model_used != st.session_state.primary_model:
             st.info(f"1차 모델 대신 폴백 모델({result.model_used})이 사용되었습니다.")
 
@@ -369,6 +442,11 @@ def _render_result_block(record: dict) -> None:
         st.markdown("**❓ 판단에 추가로 필요한 정보**")
         for m in case_match["missing_information"]:
             st.markdown(f"- {m}")
+
+    if record.get("case_attachments"):
+        st.markdown("**📎 첨부 자료**")
+        for att in record["case_attachments"]:
+            st.caption(f"📄 {att['filename']} ({att['category']})")
 
     st.divider()
     st.markdown("#### 📋 급여기준 핵심 요약")
@@ -415,6 +493,7 @@ def _build_report_context(record: dict) -> ReportContext:
         author_name=st.session_state.author_name,
         case_title=record["case_title"],
         case_info=record["case_info"],
+        case_attachments=record.get("case_attachments", []),
         source_filenames=record["source_filenames"],
         source_text=record["source_text"],
         model_used=record["model_used"],

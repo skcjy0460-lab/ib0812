@@ -151,6 +151,7 @@ class ReportContext:
     author_name: str = ""
     case_title: str = ""
     case_info: Dict[str, str] = field(default_factory=dict)
+    case_attachments: List[Dict[str, Any]] = field(default_factory=list)
     source_filenames: List[str] = field(default_factory=list)
     source_text: str = ""
     model_used: str = ""
@@ -161,13 +162,18 @@ class ReportContext:
 
 _CASE_LABELS = {
     "department": "진료과",
-    "primary_diagnosis": "주상병",
-    "secondary_diagnosis": "부상병",
-    "procedure_code": "시행 수가코드/명칭",
-    "treatment_count": "청구(예정) 시행횟수",
-    "treatment_period": "시행 기간/최근 시행일",
-    "patient_age": "환자 연령",
-    "memo": "특이사항/메모",
+    "primary_diagnosis": "주상병명 / 상병코드",
+    "diagnosis_date": "진단일",
+    "secondary_diagnosis": "부상병명 / 상병코드",
+    "procedure_code": "시행 수가코드 / 명칭",
+    "treatment_period": "시행 기간 / 최근 시행일",
+    "treatment_count": "금회 청구 시행횟수",
+    "cumulative_count": "누적(연간) 시행횟수",
+    "prescriber": "처방의 / 전문과목",
+    "claim_type": "청구 구분",
+    "special_code": "특정기호",
+    "prior_claim": "전월 동일항목 청구 여부",
+    "memo": "특이사항 / 메모",
 }
 
 
@@ -180,6 +186,16 @@ def _case_info_table(case_info: Dict[str, str]) -> str:
     if not rows:
         return "<p style='color:var(--muted);'>입력된 청구 케이스 정보가 없습니다 (급여기준 자체 요약만 수행됨).</p>"
     return f"<table class='kv-table'>{''.join(rows)}</table>"
+
+
+def _attachments_html(attachments: List[Dict[str, Any]]) -> str:
+    if not attachments:
+        return ""
+    items = "".join(
+        f"<li>{_esc(a.get('filename',''))} <span style='color:var(--muted);'>({_esc(a.get('category',''))})</span></li>"
+        for a in attachments
+    )
+    return f"<h3 style='font-size:13.5px;margin:14px 0 4px;'>첨부 자료</h3><ul>{items}</ul>"
 
 
 def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: bool) -> str:
@@ -237,7 +253,7 @@ def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: boo
 
     <div class="section">
       <h2>2. 청구 케이스 정보</h2>
-      <div class="body">{_case_info_table(ctx.case_info)}</div>
+      <div class="body">{_case_info_table(ctx.case_info)}{_attachments_html(ctx.case_attachments)}</div>
     </div>
 
     <div class="section">

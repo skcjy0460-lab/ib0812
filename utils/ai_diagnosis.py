@@ -165,12 +165,17 @@ def _build_user_prompt(criteria_text: str, case_info: Dict[str, str]) -> str:
     case_lines = []
     labels = {
         "department": "진료과",
-        "primary_diagnosis": "주상병(명/코드)",
-        "secondary_diagnosis": "부상병(명/코드)",
-        "procedure_code": "시행 수가코드/명칭",
-        "treatment_count": "청구(예정) 시행횟수",
-        "treatment_period": "시행 기간/최근 시행일",
-        "patient_age": "환자 연령",
+        "primary_diagnosis": "주상병명 / 상병코드",
+        "diagnosis_date": "진단일",
+        "secondary_diagnosis": "부상병명 / 상병코드",
+        "procedure_code": "시행 수가코드 / 명칭",
+        "treatment_period": "시행 기간 / 최근 시행일",
+        "treatment_count": "금회 청구 시행횟수",
+        "cumulative_count": "누적(연간) 시행횟수",
+        "prescriber": "처방의 / 전문과목",
+        "claim_type": "청구 구분",
+        "special_code": "특정기호",
+        "prior_claim": "전월 동일항목 청구 여부",
         "memo": "특이사항/메모",
     }
     for key, label in labels.items():
