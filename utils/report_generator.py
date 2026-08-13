@@ -59,6 +59,18 @@ body{
   font-size:15.5px;color:#fff;background:var(--navy-2);
   padding:8px 14px;border-radius:6px 6px 0 0;margin:0;
 }
+.section summary.section-summary{
+  list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  font-size:15.5px;color:#fff;background:var(--navy-2);
+  padding:8px 14px;border-radius:6px 6px 0 0;margin:0;user-select:none;
+}
+.section summary.section-summary::-webkit-details-marker{display:none;}
+.section summary.section-summary h2{background:none;padding:0;color:inherit;font-size:inherit;}
+.section summary.section-summary .toggle-arrow{
+  display:inline-block;transition:transform .15s ease;font-size:12px;margin-left:10px;flex-shrink:0;
+}
+.section[open] summary.section-summary .toggle-arrow{transform:rotate(90deg);}
+.section:not([open]) summary.section-summary{border-radius:6px;}
 .section .body{
   border:1px solid var(--line);border-top:none;border-radius:0 0 6px 6px;
   padding:16px 18px;background:#fff;
@@ -100,6 +112,8 @@ body{
   .page{box-shadow:none;padding:0;max-width:100%;}
   .no-print{display:none;}
   .section{page-break-inside:avoid;}
+  details.section:not([open]) > .body{display:block !important;}
+  details.section summary.section-summary .toggle-arrow{display:none;}
 }
 .print-btn{
   display:inline-block;margin-bottom:16px;padding:9px 18px;background:var(--accent);
@@ -198,6 +212,18 @@ def _attachments_html(attachments: List[Dict[str, Any]]) -> str:
     return f"<h3 style='font-size:13.5px;margin:14px 0 4px;'>첨부 자료</h3><ul>{items}</ul>"
 
 
+def _section(number_title: str, body_html: str, extra_style: str = "", open_default: bool = True) -> str:
+    """접고 펼치기가 가능한 보고서 섹션(details/summary) 블록을 만든다."""
+    style_attr = f" style='{extra_style}'" if extra_style else ""
+    open_attr = " open" if open_default else ""
+    return (
+        f"<details class='section'{style_attr}{open_attr}>"
+        f"<summary class='section-summary'><h2>{number_title}</h2><span class='toggle-arrow'>▶</span></summary>"
+        f"<div class='body'>{body_html}</div>"
+        f"</details>"
+    )
+
+
 def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: bool) -> str:
     d = ctx.diagnosis or {}
     case_match = d.get("case_match", {}) or {}
@@ -208,11 +234,11 @@ def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: boo
     quotes_html = _quotes_html(ctx.verified_quotes)
     source_block = ""
     if include_source and ctx.source_text:
-        source_block = f"""
-        <div class="section">
-          <h2>참고 - 급여기준 원문 전체</h2>
-          <div class="body"><div class="source-text">{_esc(ctx.source_text)}</div></div>
-        </div>"""
+        source_block = _section(
+            "참고 - 급여기준 원문 전체",
+            f"<div class='source-text'>{_esc(ctx.source_text)}</div>",
+            open_default=False,
+        )
 
     risk_html = (
         "<h3 style='font-size:13.5px;margin:14px 0 4px;'>위험 요소</h3>" + _list_to_ul(case_match.get("risk_points"))
@@ -223,8 +249,22 @@ def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: boo
         if case_match.get("missing_information") else ""
     )
     comment_html = (
-        f'<div class="section"><h2>10. AI 참고 코멘트</h2><div class="body"><p>{_esc(d.get("confidence_note",""))}</p></div></div>'
+        _section("10. AI 참고 코멘트", f"<p>{_esc(d.get('confidence_note',''))}</p>")
         if d.get("confidence_note") else ""
+    )
+
+    verdict_body = (
+        f"<span class='badge {badge_cls}'>{_esc(verdict)}</span>"
+        f"<p style='margin-top:12px;'>{_esc(case_match.get('reasoning',''))}</p>"
+        f"{risk_html}{missing_html}"
+    )
+    case_info_body = f"{_case_info_table(ctx.case_info)}{_attachments_html(ctx.case_attachments)}"
+    summary_body = (
+        f"<p>{_esc(d.get('summary',''))}</p>"
+        f"<table class='kv-table' style='margin-top:10px;'>"
+        f"<tr><th>관련 고시번호</th><td>{_esc(d.get('notice_reference','')) or '원문에서 확인되지 않음'}</td></tr>"
+        f"<tr><th>시행일자</th><td>{_esc(d.get('effective_date','')) or '원문에서 확인되지 않음'}</td></tr>"
+        f"</table>"
     )
 
     return f"""
@@ -241,62 +281,24 @@ def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: boo
       </div>
     </div>
 
-    <div class="section">
-      <h2>1. 케이스 판정</h2>
-      <div class="body">
-        <span class="badge {badge_cls}">{_esc(verdict)}</span>
-        <p style="margin-top:12px;">{_esc(case_match.get('reasoning',''))}</p>
-        {risk_html}
-        {missing_html}
-      </div>
-    </div>
+    {_section("1. 케이스 판정", verdict_body)}
 
-    <div class="section">
-      <h2>2. 청구 케이스 정보</h2>
-      <div class="body">{_case_info_table(ctx.case_info)}{_attachments_html(ctx.case_attachments)}</div>
-    </div>
+    {_section("2. 청구 케이스 정보", case_info_body)}
 
-    <div class="section">
-      <h2>3. 급여기준 핵심 요약</h2>
-      <div class="body">
-        <p>{_esc(d.get('summary',''))}</p>
-        <table class="kv-table" style="margin-top:10px;">
-          <tr><th>관련 고시번호</th><td>{_esc(d.get('notice_reference','')) or '원문에서 확인되지 않음'}</td></tr>
-          <tr><th>시행일자</th><td>{_esc(d.get('effective_date','')) or '원문에서 확인되지 않음'}</td></tr>
-        </table>
-      </div>
-    </div>
+    {_section("3. 급여기준 핵심 요약", summary_body)}
 
-    <div class="section">
-      <h2>4. 핵심 인정 요건</h2>
-      <div class="body">{_list_to_ul(d.get('key_criteria'))}</div>
-    </div>
+    {_section("4. 핵심 인정 요건", _list_to_ul(d.get('key_criteria')))}
 
     <div class="grid-2">
-      <div class="section" style="margin-top:0;">
-        <h2>5. 인정 횟수·기간 제한</h2>
-        <div class="body">{_list_to_ul(d.get('frequency_limits'))}</div>
-      </div>
-      <div class="section" style="margin-top:0;">
-        <h2>6. 필수 서류·기록·자격 요건</h2>
-        <div class="body">{_list_to_ul(d.get('required_documentation'))}</div>
-      </div>
+      {_section("5. 인정 횟수·기간 제한", _list_to_ul(d.get('frequency_limits')), extra_style="margin-top:0;")}
+      {_section("6. 필수 서류·기록·자격 요건", _list_to_ul(d.get('required_documentation')), extra_style="margin-top:0;")}
     </div>
 
-    <div class="section">
-      <h2>7. 제외 사유 및 주의사항 (삭감 위험)</h2>
-      <div class="body">{_list_to_ul(d.get('exclusions_or_cautions'))}</div>
-    </div>
+    {_section("7. 제외 사유 및 주의사항 (삭감 위험)", _list_to_ul(d.get('exclusions_or_cautions')))}
 
-    <div class="section">
-      <h2>8. 청구 전 체크리스트</h2>
-      <div class="body">{_list_to_ul(d.get('checklist'), css_class='checklist')}</div>
-    </div>
+    {_section("8. 청구 전 체크리스트", _list_to_ul(d.get('checklist'), css_class='checklist'))}
 
-    <div class="section">
-      <h2>9. 원문 근거 인용</h2>
-      <div class="body">{quotes_html}</div>
-    </div>
+    {_section("9. 원문 근거 인용", quotes_html)}
 
     {comment_html}
 
@@ -304,6 +306,147 @@ def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: boo
     </div>
     """
 
+
+_BLOG_CSS = """
+:root{
+  --navy:#0f2a4a; --accent:#1c6fd6; --accent-soft:#eaf2fd;
+  --ink:#1b2430; --muted:#5b6672; --line:#e7ebf0; --bg:#eef1f5;
+  --c-blue:#2563eb; --c-blue-bg:#eef4ff;
+  --c-green:#0d9463; --c-green-bg:#e9f9f2;
+  --c-purple:#7c3aed; --c-purple-bg:#f3edfe;
+  --c-orange:#d9720a; --c-orange-bg:#fdf1e2;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  line-height:1.6;
+}
+.guide-bar{
+  max-width:820px;margin:20px auto 0;padding:12px 18px;background:#fffbe6;
+  border:1px dashed #e0c341;border-radius:8px;font-size:12.5px;color:#6b5900;
+}
+.guide-bar b{color:#4a3d00;}
+.blog-wrap{max-width:820px;margin:18px auto 40px;padding:0 0 4px;}
+.blog-card{
+  background:#fff;border-radius:18px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(15,42,74,.08);border:1px solid var(--line);
+}
+.blog-hero{
+  background:linear-gradient(135deg,var(--navy),#1e4d85);
+  color:#fff;padding:30px 34px 26px;
+}
+.blog-hero .eyebrow{
+  font-size:12.5px;letter-spacing:.3px;opacity:.85;margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.blog-hero h1{font-size:25px;margin:0 0 12px;line-height:1.35;}
+.blog-hero .meta-badges{display:flex;gap:8px;flex-wrap:wrap;}
+.blog-hero .meta-badge{
+  background:rgba(255,255,255,.14);padding:4px 12px;border-radius:20px;font-size:12px;
+}
+.blog-summary{padding:24px 34px 6px;font-size:15px;color:var(--ink);}
+.blog-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:18px 34px;}
+.blog-card-item{border-radius:12px;padding:16px 18px;}
+.blog-card-item h3{margin:0 0 10px;font-size:14.5px;display:flex;align-items:center;gap:6px;}
+.blog-card-item ul{margin:0;padding-left:18px;font-size:13.5px;}
+.blog-card-item li{margin:4px 0;}
+.b-blue{background:var(--c-blue-bg);}
+.b-blue h3{color:var(--c-blue);}
+.b-green{background:var(--c-green-bg);}
+.b-green h3{color:var(--c-green);}
+.b-purple{background:var(--c-purple-bg);}
+.b-purple h3{color:var(--c-purple);}
+.b-orange{background:var(--c-orange-bg);}
+.b-orange h3{color:var(--c-orange);}
+.blog-checklist{padding:6px 34px 22px;}
+.blog-checklist h3{font-size:14.5px;margin:8px 0 10px;color:var(--navy);}
+.blog-checklist ul{list-style:none;margin:0;padding:0;font-size:13.5px;}
+.blog-checklist li{padding:5px 0 5px 24px;position:relative;}
+.blog-checklist li:before{content:'✅';position:absolute;left:0;font-size:12px;}
+.blog-footer{
+  padding:14px 34px 20px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;
+}
+@media (max-width:600px){
+  .blog-grid{grid-template-columns:1fr;}
+  .blog-hero,.blog-summary,.blog-grid,.blog-checklist,.blog-footer{padding-left:20px;padding-right:20px;}
+}
+"""
+
+
+def _blog_card(title: str, icon: str, css_class: str, items: List[str]) -> str:
+    if not items:
+        return ""
+    lis = "".join(f"<li>{_esc(i)}</li>" for i in items)
+    return f"<div class='blog-card-item {css_class}'><h3>{icon} {_esc(title)}</h3><ul>{lis}</ul></div>"
+
+
+def generate_blog_summary_html(ctx: ReportContext, blog_title: str = "") -> str:
+    """블로그 게시용 - 케이스 정보 없이 급여기준 핵심만 담은 스크린샷용 요약 카드.
+
+    - 원문 전체, 청구 케이스 정보/첨부자료, 특정 케이스 판정 결과는 포함하지 않는다
+      (블로그는 불특정 다수가 보는 공개 콘텐츠이므로 개별 청구 건 정보 노출을 방지).
+    - 한 화면(A4 한 장 내외)에 들어오도록 카드형으로 압축 배치한다.
+    """
+    d = ctx.diagnosis or {}
+    title = blog_title or (ctx.source_filenames[0].rsplit(".", 1)[0] if ctx.source_filenames else "") \
+        or ctx.case_title or "급여기준 안내"
+    generated_at = ctx.generated_at or datetime.now()
+
+    badges = []
+    if d.get("notice_reference"):
+        badges.append(f"<span class='meta-badge'>📌 {_esc(d['notice_reference'])}</span>")
+    if d.get("effective_date"):
+        badges.append(f"<span class='meta-badge'>🗓 시행일 {_esc(d['effective_date'])}</span>")
+    badges_html = "".join(badges)
+
+    cards_html = "".join([
+        _blog_card("급여 인정 요건", "🎯", "b-blue", d.get("key_criteria") or []),
+        _blog_card("인정 횟수 · 기간", "🔢", "b-green", d.get("frequency_limits") or []),
+        _blog_card("필요 서류 · 자격", "📎", "b-purple", d.get("required_documentation") or []),
+        _blog_card("주의사항", "🚫", "b-orange", d.get("exclusions_or_cautions") or []),
+    ])
+
+    checklist_items = (d.get("checklist") or [])[:6]
+    checklist_html = ""
+    if checklist_items:
+        lis = "".join(f"<li>{_esc(i)}</li>" for i in checklist_items)
+        checklist_html = f"<div class='blog-checklist'><h3>✔ 청구 전 체크리스트</h3><ul>{lis}</ul></div>"
+
+    org_line = _esc(ctx.hospital_name) if ctx.hospital_name else "청구심사 AI 가이드"
+
+    return f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{_esc(title)} - 블로그용 요약</title>
+<style>{_BLOG_CSS}</style>
+</head>
+<body>
+  <div class="guide-bar no-capture">
+    📸 아래 카드 영역만 화면 캡처(스크린샷)해서 블로그에 붙여넣으세요. 이 안내 문구는 캡처에 포함하지 않아도 됩니다.
+    <b>Windows: Win+Shift+S · Mac: Cmd+Shift+4</b>
+  </div>
+  <div class="blog-wrap">
+    <div class="blog-card">
+      <div class="blog-hero">
+        <div class="eyebrow">🏥 급여기준 안내</div>
+        <h1>{_esc(title)}</h1>
+        <div class="meta-badges">{badges_html}</div>
+      </div>
+      <div class="blog-summary">{_esc(d.get('summary',''))}</div>
+      <div class="blog-grid">{cards_html}</div>
+      {checklist_html}
+      <div class="blog-footer">
+        <span>{org_line} · AI 요약 (참고용, 최종 판단은 심평원 공식 자료 확인 필요)</span>
+        <span>{generated_at.strftime('%Y-%m-%d')}</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
 
 def generate_html_report(ctx: ReportContext, include_source: bool = True) -> str:
     """단일 심사 건에 대한 완결된 HTML 보고서 문자열을 생성한다."""
@@ -318,11 +461,17 @@ def generate_html_report(ctx: ReportContext, include_source: bool = True) -> str
 </head>
 <body>
 <div class="page">
-  <button class="print-btn no-print" onclick="window.print()">🖨 인쇄 / PDF로 저장</button>
+  <button class="print-btn no-print" onclick="printReport()">🖨 인쇄 / PDF로 저장</button>
   {body}
   <div class="disclaimer"><strong>⚠ 유의사항</strong><br/>{_esc(DISCLAIMER_TEXT)}</div>
   <div class="footer">청구심사 AI 가이드 &middot; 자동 생성 보고서 &middot; {(ctx.generated_at or datetime.now()).strftime('%Y-%m-%d %H:%M:%S')}</div>
 </div>
+<script>
+function printReport(){{
+  document.querySelectorAll('details.section').forEach(function(d){{ d.open = true; }});
+  window.print();
+}}
+</script>
 </body>
 </html>"""
 
@@ -351,7 +500,7 @@ def generate_batch_html_report(contexts: List[ReportContext], batch_title: str =
 </head>
 <body>
 <div class="page">
-  <button class="print-btn no-print" onclick="window.print()">🖨 인쇄 / PDF로 저장</button>
+  <button class="print-btn no-print" onclick="printReport()">🖨 인쇄 / PDF로 저장</button>
   <div class="report-header">
     <div><h1>{_esc(batch_title)}</h1></div>
     <div class="meta">생성일시: {generated_at.strftime('%Y-%m-%d %H:%M')}<br/>총 {len(contexts)}건</div>
@@ -361,5 +510,11 @@ def generate_batch_html_report(contexts: List[ReportContext], batch_title: str =
   <div class="disclaimer"><strong>⚠ 유의사항</strong><br/>{_esc(DISCLAIMER_TEXT)}</div>
   <div class="footer">청구심사 AI 가이드 &middot; 자동 생성 일괄 보고서 &middot; {generated_at.strftime('%Y-%m-%d %H:%M:%S')}</div>
 </div>
+<script>
+function printReport(){{
+  document.querySelectorAll('details.section').forEach(function(d){{ d.open = true; }});
+  window.print();
+}}
+</script>
 </body>
 </html>"""

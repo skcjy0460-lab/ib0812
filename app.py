@@ -28,7 +28,12 @@ from utils.ai_diagnosis import (
     verify_quotes_against_source,
 )
 from utils.file_extractor import SUPPORTED_EXTENSIONS, extract_text_from_file
-from utils.report_generator import ReportContext, generate_batch_html_report, generate_html_report
+from utils.report_generator import (
+    ReportContext,
+    generate_batch_html_report,
+    generate_blog_summary_html,
+    generate_html_report,
+)
 
 # ----------------------------------------------------------------------------
 # 기본 설정
@@ -95,6 +100,7 @@ def _init_state() -> None:
         "case_info": {k: "" for k, _, _ in CASE_FIELD_DEFS},
         "case_attachments": [],  # list of {"filename": str, "size": int, "category": str}
         "attachment_uploader_key": 0,
+        "case_form_version": 0,
         "last_result": None,  # dict: diagnosis + meta
         "history": [],  # list of same shape as last_result
         "uploader_key": 0,
@@ -284,8 +290,24 @@ def _combined_filenames() -> list:
 # ----------------------------------------------------------------------------
 # 2. 케이스 정보
 # ----------------------------------------------------------------------------
+def _reset_case_info() -> None:
+    st.session_state.case_title = ""
+    st.session_state.case_info = {k: "" for k, _, _ in CASE_FIELD_DEFS}
+    st.session_state.case_attachments = []
+    st.session_state.attachment_uploader_key += 1
+    st.session_state.case_form_version += 1  # 위젯 key 버전을 올려 입력값을 강제로 비움
+
+
 def _render_case_tab() -> None:
-    st.subheader("2️⃣ 청구 케이스 정보 (선택 입력)")
+    header_cols = st.columns([5, 1.4])
+    with header_cols[0]:
+        st.subheader("2️⃣ 청구 케이스 정보 (선택 입력)")
+    with header_cols[1]:
+        st.write("")
+        if st.button("🔄 케이스 정보 초기화", use_container_width=True):
+            _reset_case_info()
+            st.rerun()
+
     st.caption(
         "실제 청구 건 정보를 입력하면 AI가 급여기준과 케이스를 대조해 적합/주의/부적합을 판정합니다. "
         "비워두면 급여기준 자체에 대한 요약·체크리스트만 생성됩니다. 환자 개인식별정보(이름 등)는 "
@@ -295,15 +317,17 @@ def _render_case_tab() -> None:
         "케이스 제목 (보고서 상단에 표시됩니다)",
         value=st.session_state.case_title,
         placeholder="예) 도수치료 15회 초과 청구 검토",
+        key=f"case_title_{st.session_state.case_form_version}",
     )
 
+    fv = st.session_state.case_form_version
     for group in CASE_FORM_GROUPS:
         st.markdown(f"##### {group['icon']} {group['title']}")
         cols = st.columns(len(group["fields"]) if len(group["fields"]) <= 3 else 3)
         for idx, (key, label, kind) in enumerate(group["fields"]):
             with cols[idx % len(cols)]:
                 st.session_state.case_info[key] = st.text_input(
-                    label, value=st.session_state.case_info.get(key, ""), key=f"case_{key}"
+                    label, value=st.session_state.case_info.get(key, ""), key=f"case_{key}_{fv}"
                 )
         st.markdown("")
 
@@ -349,7 +373,7 @@ def _render_case_tab() -> None:
         "특이사항 / 메모",
         value=st.session_state.case_info.get("memo", ""),
         height=100,
-        key="case_memo",
+        key=f"case_memo_{fv}",
     )
 
 
@@ -539,6 +563,24 @@ def _render_report_tab() -> None:
             )
         else:
             st.caption("진단 이력이 2건 이상일 때 일괄 보고서를 생성할 수 있습니다.")
+
+    st.divider()
+    st.markdown("#### 📝 블로그용 요약 카드")
+    st.caption(
+        "청구 케이스 정보·원문 전체 없이, 급여기준 핵심 내용만 담은 스크린샷용 요약 카드입니다. "
+        "블로그·SNS 등 공개 채널에 올리기 전 개별 청구 건 정보가 섞이지 않도록 설계했습니다."
+    )
+    blog_html = generate_blog_summary_html(_build_report_context(record))
+    with st.expander("🔍 미리보기", expanded=False):
+        st.components.v1.html(blog_html, height=760, scrolling=True)
+    st.download_button(
+        "📝 블로그용 요약 카드 다운로드 (HTML)",
+        data=blog_html.encode("utf-8"),
+        file_name=f"블로그요약_{record['case_title'][:20]}_{datetime.now().strftime('%Y%m%d_%H%M')}.html",
+        mime="text/html",
+        use_container_width=True,
+    )
+    st.caption("💡 다운로드한 HTML을 브라우저로 열고, 안내 문구 아래 카드 영역만 캡처해 블로그에 붙여넣으세요.")
 
 
 # ----------------------------------------------------------------------------
