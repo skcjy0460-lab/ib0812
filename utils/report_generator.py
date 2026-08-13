@@ -327,6 +327,16 @@ body{
   border:1px dashed #e0c341;border-radius:8px;font-size:12.5px;color:#6b5900;
 }
 .guide-bar b{color:#4a3d00;}
+.action-bar{
+  max-width:820px;margin:12px auto 0;display:flex;gap:10px;flex-wrap:wrap;
+}
+.img-btn{
+  border:none;border-radius:8px;padding:10px 18px;font-size:13.5px;font-weight:500;
+  cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+}
+.img-btn.primary{background:var(--accent);color:#fff;}
+.img-btn.primary:disabled{background:#9db8dd;cursor:progress;}
+.img-btn-status{font-size:12.5px;color:var(--muted);align-self:center;}
 .blog-wrap{max-width:820px;margin:18px auto 40px;padding:0 0 4px;}
 .blog-card{
   background:#fff;border-radius:18px;overflow:hidden;
@@ -416,6 +426,10 @@ def generate_blog_summary_html(ctx: ReportContext, blog_title: str = "") -> str:
 
     org_line = _esc(ctx.hospital_name) if ctx.hospital_name else "청구심사 AI 가이드"
 
+    # 다운로드 파일명에 쓸 안전한(특수문자 제거) 제목
+    safe_title = "".join(c for c in title if c not in '/\\:*?"<>|').strip() or "급여기준_요약"
+    js_filename = f"{safe_title}_{generated_at.strftime('%Y%m%d')}.jpg"
+
     return f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -426,11 +440,16 @@ def generate_blog_summary_html(ctx: ReportContext, blog_title: str = "") -> str:
 </head>
 <body>
   <div class="guide-bar no-capture">
-    📸 아래 카드 영역만 화면 캡처(스크린샷)해서 블로그에 붙여넣으세요. 이 안내 문구는 캡처에 포함하지 않아도 됩니다.
+    📸 아래 <b>[이미지(JPG)로 저장]</b> 버튼을 누르면 카드 전체가 한 장의 이미지 파일로 저장됩니다.
+    (인터넷 연결이 필요합니다) 버튼이 동작하지 않으면 카드 영역만 직접 화면 캡처하세요.
     <b>Windows: Win+Shift+S · Mac: Cmd+Shift+4</b>
   </div>
+  <div class="action-bar no-capture">
+    <button id="save-img-btn" class="img-btn primary" onclick="saveCardAsImage()">🖼 이미지(JPG)로 저장</button>
+    <span id="save-img-status" class="img-btn-status"></span>
+  </div>
   <div class="blog-wrap">
-    <div class="blog-card">
+    <div class="blog-card" id="capture-target">
       <div class="blog-hero">
         <div class="eyebrow">🏥 급여기준 안내</div>
         <h1>{_esc(title)}</h1>
@@ -445,6 +464,38 @@ def generate_blog_summary_html(ctx: ReportContext, blog_title: str = "") -> str:
       </div>
     </div>
   </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+function saveCardAsImage(){{
+  var btn = document.getElementById('save-img-btn');
+  var status = document.getElementById('save-img-status');
+  if (typeof html2canvas === 'undefined') {{
+    status.textContent = '이미지 저장 기능을 불러오지 못했습니다 (인터넷 연결을 확인하거나 화면을 직접 캡처해주세요).';
+    return;
+  }}
+  btn.disabled = true;
+  status.textContent = '이미지를 생성하는 중입니다...';
+  var target = document.getElementById('capture-target');
+  html2canvas(target, {{ scale: 2, backgroundColor: '#ffffff', useCORS: true }}).then(function(canvas) {{
+    canvas.toBlob(function(blob) {{
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = "{js_filename}";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      status.textContent = '저장되었습니다.';
+      btn.disabled = false;
+    }}, 'image/jpeg', 0.95);
+  }}).catch(function(err) {{
+    status.textContent = '이미지 저장에 실패했습니다. 화면을 직접 캡처해주세요.';
+    btn.disabled = false;
+  }});
+}}
+</script>
 </body>
 </html>"""
 
