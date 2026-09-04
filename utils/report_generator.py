@@ -33,6 +33,7 @@ _BASE_CSS = """
   --danger:#b3261e; --bg:#f5f7fa;
 }
 *{box-sizing:border-box;}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
 body{
   margin:0; padding:0; background:var(--bg); color:var(--ink);
   font-family:'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
@@ -108,9 +109,10 @@ body{
 .toc a{color:var(--accent);text-decoration:none;font-size:13px;}
 .toc li{margin:4px 0;}
 @media print{
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}
   body{background:#fff;}
   .page{box-shadow:none;padding:0;max-width:100%;}
-  .no-print{display:none;}
+  .no-print{display:none !important;}
   .section{page-break-inside:avoid;}
   details.section:not([open]) > .body{display:block !important;}
   details.section summary.section-summary .toggle-arrow{display:none;}
