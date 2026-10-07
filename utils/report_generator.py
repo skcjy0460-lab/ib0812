@@ -311,122 +311,146 @@ def _single_case_section(ctx: ReportContext, anchor_id: str, include_source: boo
 
 _BLOG_CSS = """
 :root{
-  --navy:#0f2a4a; --accent:#1c6fd6; --accent-soft:#eaf2fd;
-  --ink:#1b2430; --muted:#5b6672; --line:#e7ebf0; --bg:#eef1f5;
-  --c-blue:#2563eb; --c-blue-bg:#eef4ff;
-  --c-green:#0d9463; --c-green-bg:#e9f9f2;
-  --c-purple:#7c3aed; --c-purple-bg:#f3edfe;
-  --c-orange:#d9720a; --c-orange-bg:#fdf1e2;
+  --ink:#172b3d; --muted:#8393a1; --page-bg:#eef2f3;
+  --navy-d:#12365a; --navy:#173a59; --navy-l:#245a89;
+  --teal:#2ab3aa; --teal-d:#138b8d; --teal-text:#168b91;
+  --blue-line:#cde4f6; --green-line:#ccebe5; --purple-line:#e4d8f6; --red-line:#f3d5d5;
 }
 *{box-sizing:border-box;}
 body{
-  margin:0;background:var(--bg);color:var(--ink);
-  font-family:'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
-  line-height:1.6;
+  margin:0;background:var(--page-bg);color:var(--ink);
+  font-family:Pretendard,'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
 }
 .guide-bar{
-  max-width:820px;margin:20px auto 0;padding:12px 18px;background:#fffbe6;
+  max-width:1000px;margin:20px auto 0;padding:12px 18px;background:#fffbe6;
   border:1px dashed #e0c341;border-radius:8px;font-size:12.5px;color:#6b5900;
 }
 .guide-bar b{color:#4a3d00;}
-.action-bar{
-  max-width:820px;margin:12px auto 0;display:flex;gap:10px;flex-wrap:wrap;
-}
+.action-bar{max-width:1000px;margin:12px auto 0;display:flex;gap:10px;flex-wrap:wrap;}
 .img-btn{
-  border:none;border-radius:8px;padding:10px 18px;font-size:13.5px;font-weight:500;
+  border:none;border-radius:8px;padding:10px 18px;font-size:13.5px;font-weight:600;
   cursor:pointer;display:inline-flex;align-items:center;gap:6px;
 }
-.img-btn.primary{background:var(--accent);color:#fff;}
-.img-btn.primary:disabled{background:#9db8dd;cursor:progress;}
+.img-btn.primary{background:var(--teal-d);color:#fff;}
+.img-btn.primary:disabled{background:#9fc6c4;cursor:progress;}
 .img-btn-status{font-size:12.5px;color:var(--muted);align-self:center;}
-.blog-wrap{max-width:820px;margin:18px auto 40px;padding:0 0 4px;}
-.blog-card{
-  background:#fff;border-radius:18px;overflow:hidden;
-  box-shadow:0 1px 3px rgba(15,42,74,.08);border:1px solid var(--line);
+
+/* 급여기준 리포트 카드 */
+.salary-guide-report{width:1000px;margin:18px auto 40px;background:#ffffff;padding:42px 44px 30px;}
+.top-line{
+  height:3px;
+  background:linear-gradient(90deg,var(--navy) 0%,var(--navy) 50%,var(--teal) 50%,var(--teal) 100%);
+  margin-bottom:22px;
 }
-.blog-hero{
-  background:linear-gradient(135deg,var(--navy),#1e4d85);
-  color:#fff;padding:30px 34px 26px;
+.report-label{font-size:11px;letter-spacing:4px;color:#7d94aa;margin-bottom:24px;}
+.category{font-size:15px;font-weight:700;color:var(--navy-l);margin-bottom:12px;}
+.title{margin:0;font-size:37px;line-height:1.25;letter-spacing:-1.5px;color:var(--navy-d);font-weight:800;}
+.meta{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+.meta-item{background:#eef7fb;border-radius:20px;padding:8px 16px;color:#365c77;font-size:13px;font-weight:600;}
+.summary{
+  display:grid;grid-template-columns:130px 1fr;margin-top:24px;padding:18px 20px;
+  background:#f4fafb;border-radius:10px;border:1px solid #e2eff1;
 }
-.blog-hero .eyebrow{
-  font-size:12.5px;letter-spacing:.3px;opacity:.85;margin-bottom:8px;
-  display:flex;align-items:center;gap:6px;
+.summary-title{
+  display:flex;align-items:center;color:var(--teal-text);font-size:16px;font-weight:800;
+  border-right:1px solid #aad9da;
 }
-.blog-hero h1{font-size:25px;margin:0 0 12px;line-height:1.35;}
-.blog-hero .meta-badges{display:flex;gap:8px;flex-wrap:wrap;}
-.blog-hero .meta-badge{
-  background:rgba(255,255,255,.14);padding:4px 12px;border-radius:20px;font-size:12px;
+.summary-text{padding-left:22px;font-size:14px;line-height:1.7;color:#43596b;}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:23px;}
+.info-card{position:relative;padding:24px 24px 22px;border-radius:10px;min-height:220px;background:#ffffff;}
+.card-blue{border:1px solid var(--blue-line);}
+.card-green{border:1px solid var(--green-line);}
+.card-purple{border:1px solid var(--purple-line);}
+.card-red{border:1px solid var(--red-line);}
+.card-number{position:absolute;right:20px;top:18px;font-size:35px;font-weight:800;color:#e7eef5;}
+.card-title{font-size:21px;font-weight:800;margin-bottom:20px;color:#12385f;}
+.card-green .card-title{color:#087c73;}
+.card-purple .card-title{color:#7035b3;}
+.card-red .card-title{color:#d43d45;}
+.info-card ul{margin:0;padding-left:20px;}
+.info-card li{margin-bottom:13px;padding-left:3px;font-size:13.5px;line-height:1.65;color:#374c5e;}
+.card-blue li::marker{color:#438fe1;}
+.card-green li::marker{color:#25ad99;}
+.card-purple li::marker{color:#7943c8;}
+.card-red li::marker{color:#ef555b;}
+.info-card:empty,.info-card.is-empty{display:none;}
+.check-section{margin-top:24px;}
+.check-title{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:20px;font-weight:800;color:#12385f;}
+.check-icon{
+  display:flex;align-items:center;justify-content:center;width:30px;height:30px;
+  background:var(--teal-d);color:#fff;border-radius:50%;flex-shrink:0;
 }
-.blog-summary{padding:24px 34px 6px;font-size:15px;color:var(--ink);}
-.blog-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:18px 34px;}
-.blog-card-item{border-radius:12px;padding:16px 18px;}
-.blog-card-item h3{margin:0 0 10px;font-size:14.5px;display:flex;align-items:center;gap:6px;}
-.blog-card-item ul{margin:0;padding-left:18px;font-size:13.5px;}
-.blog-card-item li{margin:4px 0;}
-.b-blue{background:var(--c-blue-bg);}
-.b-blue h3{color:var(--c-blue);}
-.b-green{background:var(--c-green-bg);}
-.b-green h3{color:var(--c-green);}
-.b-purple{background:var(--c-purple-bg);}
-.b-purple h3{color:var(--c-purple);}
-.b-orange{background:var(--c-orange-bg);}
-.b-orange h3{color:var(--c-orange);}
-.blog-checklist{padding:6px 34px 22px;}
-.blog-checklist h3{font-size:14.5px;margin:8px 0 10px;color:var(--navy);}
-.blog-checklist ul{list-style:none;margin:0;padding:0;font-size:13.5px;}
-.blog-checklist li{padding:5px 0 5px 24px;position:relative;}
-.blog-checklist li:before{content:'✅';position:absolute;left:0;font-size:12px;}
-.blog-footer{
-  padding:14px 34px 20px;border-top:1px solid var(--line);
-  font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;
+.check-box{border:1px solid #dce6ec;border-radius:9px;overflow:hidden;}
+.check-row{
+  display:grid;grid-template-columns:30px 28px 1fr;align-items:start;
+  padding:11px 14px;border-bottom:1px solid #e7edf1;font-size:13px;line-height:1.55;
 }
-@media (max-width:600px){
-  .blog-grid{grid-template-columns:1fr;}
-  .blog-hero,.blog-summary,.blog-grid,.blog-checklist,.blog-footer{padding-left:20px;padding-right:20px;}
+.check-row:last-child{border-bottom:none;}
+.check{
+  width:18px;height:18px;border-radius:4px;background:#34b98d;color:#fff;
+  text-align:center;line-height:18px;font-size:12px;
 }
+.check-number{font-weight:800;color:#49667e;}
+.footer{
+  display:flex;justify-content:space-between;margin-top:22px;padding-top:14px;
+  border-top:1px solid #dce5ea;color:#8393a1;font-size:11px;flex-wrap:wrap;gap:6px;
+}
+.footer strong{color:#355e82;font-size:14px;}
 """
 
 
-def _blog_card(title: str, icon: str, css_class: str, items: List[str]) -> str:
+def _guide_card(number: str, title: str, css_class: str, items: List[str]) -> str:
     if not items:
-        return ""
+        return "<section class='info-card is-empty'></section>"
     lis = "".join(f"<li>{_esc(i)}</li>" for i in items)
-    return f"<div class='blog-card-item {css_class}'><h3>{icon} {_esc(title)}</h3><ul>{lis}</ul></div>"
+    return (
+        f"<section class='info-card {css_class}'>"
+        f"<div class='card-number'>{number}</div>"
+        f"<div class='card-title'>{_esc(title)}</div>"
+        f"<ul>{lis}</ul>"
+        f"</section>"
+    )
 
 
 def generate_blog_summary_html(ctx: ReportContext, blog_title: str = "") -> str:
-    """블로그 게시용 - 케이스 정보 없이 급여기준 핵심만 담은 스크린샷용 요약 카드.
+    """블로그 게시용 - 케이스 정보 없이 급여기준 핵심만 담은 스크린샷/JPG 저장용 요약 카드.
 
     - 원문 전체, 청구 케이스 정보/첨부자료, 특정 케이스 판정 결과는 포함하지 않는다
       (블로그는 불특정 다수가 보는 공개 콘텐츠이므로 개별 청구 건 정보 노출을 방지).
-    - 한 화면(A4 한 장 내외)에 들어오도록 카드형으로 압축 배치한다.
+    - 1000px 고정폭 카드 1장(A4 한 장 내외)에 들어오도록 디자인한다.
     """
     d = ctx.diagnosis or {}
     title = blog_title or (ctx.source_filenames[0].rsplit(".", 1)[0] if ctx.source_filenames else "") \
         or ctx.case_title or "급여기준 안내"
     generated_at = ctx.generated_at or datetime.now()
 
-    badges = []
+    meta_items = []
     if d.get("notice_reference"):
-        badges.append(f"<span class='meta-badge'>📌 {_esc(d['notice_reference'])}</span>")
+        meta_items.append(f"<div class='meta-item'>📌 {_esc(d['notice_reference'])}</div>")
     if d.get("effective_date"):
-        badges.append(f"<span class='meta-badge'>🗓 시행일 {_esc(d['effective_date'])}</span>")
-    badges_html = "".join(badges)
+        meta_items.append(f"<div class='meta-item'>▣ 시행일 {_esc(d['effective_date'])}</div>")
+    meta_html = "".join(meta_items)
 
     cards_html = "".join([
-        _blog_card("급여 인정 요건", "🎯", "b-blue", d.get("key_criteria") or []),
-        _blog_card("인정 횟수 · 기간", "🔢", "b-green", d.get("frequency_limits") or []),
-        _blog_card("필요 서류 · 자격", "📎", "b-purple", d.get("required_documentation") or []),
-        _blog_card("주의사항", "🚫", "b-orange", d.get("exclusions_or_cautions") or []),
+        _guide_card("01", "▣ 급여 인정 요건", "card-blue", d.get("key_criteria") or []),
+        _guide_card("02", "♡ 인정 횟수 · 기간", "card-green", d.get("frequency_limits") or []),
+        _guide_card("03", "▤ 필요 서류 · 자격", "card-purple", d.get("required_documentation") or []),
+        _guide_card("04", "! 주의사항", "card-red", d.get("exclusions_or_cautions") or []),
     ])
 
     checklist_items = (d.get("checklist") or [])[:6]
+    checklist_rows = "".join(
+        f"<div class='check-row'><div class='check'>✓</div><div class='check-number'>{i+1}.</div><div>{_esc(item)}</div></div>"
+        for i, item in enumerate(checklist_items)
+    )
     checklist_html = ""
-    if checklist_items:
-        lis = "".join(f"<li>{_esc(i)}</li>" for i in checklist_items)
-        checklist_html = f"<div class='blog-checklist'><h3>✔ 청구 전 체크리스트</h3><ul>{lis}</ul></div>"
+    if checklist_rows:
+        checklist_html = f"""<section class="check-section">
+      <div class="check-title"><div class="check-icon">✓</div>청구 전 체크리스트</div>
+      <div class="check-box">{checklist_rows}</div>
+    </section>"""
 
-    org_line = _esc(ctx.hospital_name) if ctx.hospital_name else "청구심사 AI 가이드"
+    brand = _esc(ctx.hospital_name) if ctx.hospital_name else "Wivo AI"
 
     # 다운로드 파일명에 쓸 안전한(특수문자 제거) 제목
     safe_title = "".join(c for c in title if c not in '/\\:*?"<>|').strip() or "급여기준_요약"
@@ -450,21 +474,27 @@ def generate_blog_summary_html(ctx: ReportContext, blog_title: str = "") -> str:
     <button id="save-img-btn" class="img-btn primary" onclick="saveCardAsImage()">🖼 이미지(JPG)로 저장</button>
     <span id="save-img-status" class="img-btn-status"></span>
   </div>
-  <div class="blog-wrap">
-    <div class="blog-card" id="capture-target">
-      <div class="blog-hero">
-        <div class="eyebrow">🏥 급여기준 안내</div>
-        <h1>{_esc(title)}</h1>
-        <div class="meta-badges">{badges_html}</div>
-      </div>
-      <div class="blog-summary">{_esc(d.get('summary',''))}</div>
-      <div class="blog-grid">{cards_html}</div>
-      {checklist_html}
-      <div class="blog-footer">
-        <span>{org_line} · AI 요약 (참고용, 최종 판단은 심평원 공식 자료 확인 필요)</span>
-        <span>{generated_at.strftime('%Y-%m-%d')}</span>
-      </div>
+
+  <div class="salary-guide-report" id="capture-target">
+    <div class="top-line"></div>
+    <div class="report-label">MEDICAL REIMBURSEMENT GUIDE</div>
+    <div class="category">▣ 급여기준 안내</div>
+    <h1 class="title">{_esc(title)}</h1>
+    <div class="meta">{meta_html}</div>
+
+    <div class="summary">
+      <div class="summary-title">◆ 핵심 요약</div>
+      <div class="summary-text">{_esc(d.get('summary',''))}</div>
     </div>
+
+    <div class="card-grid">{cards_html}</div>
+
+    {checklist_html}
+
+    <footer class="footer">
+      <div><strong>{brand} · 요약</strong> &nbsp; 의료 행정의 전문성을 더하는 AI 파트너</div>
+      <div>{generated_at.strftime('%Y-%m-%d')}</div>
+    </footer>
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
